@@ -1,6 +1,6 @@
 /* Studyspace SAT — offline shell. Network first (always the newest files when online), saved copy when offline.
    Your data never passes through here; it lives in localStorage. */
-const CACHE = 'studyspace-sat-v1';
+const CACHE = 'studyspace-sat-v2';
 const ASSETS = ['./', 'index.html', 'manifest.webmanifest', 'css/app.css',
   'js/util.js', 'js/content/skills.js', 'js/content/rw.js', 'js/content/math.js', 'js/content/vocab.js',
   'js/store.js', 'js/engine.js', 'js/ui.js', 'js/orbit.js', 'js/views.js', 'js/player.js', 'js/app.js',

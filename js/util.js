@@ -62,6 +62,8 @@ function relDay(s) {
   if (n > 1 && n < 7) return DAYS[dow(s) - 1];
   return fmtDate(s);
 }
+/* for use mid-sentence: "today", "yesterday", but month names keep their capital */
+const relDayLow = s => { const r = relDay(s); return /^(Today|Tomorrow|Yesterday)$/.test(r) ? r.toLowerCase() : r; };
 const fmtMin = m => { m = Math.round(m); return m < 60 ? m + ' min' : Math.floor(m / 60) + ' h' + (m % 60 ? ' ' + (m % 60) + ' min' : ''); };
 const fmtClock = sec => { sec = Math.max(0, Math.round(sec)); return Math.floor(sec / 60) + ':' + pad(sec % 60); };
 const plural = (n, one, many) => n + ' ' + (n === 1 ? one : (many || one + 's'));

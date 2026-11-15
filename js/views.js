@@ -74,7 +74,7 @@ function orbitCard() {
   return html`<section class="card"><div class="row" style="margin-bottom:8px"><span style="color:var(--accent)">${icon('orbit', 20)}</span><h2 class="h2 grow">Studyspace Orbit</h2>${here ? html`<span class="chip ok">Connected</span>` : ''}</div>
     <p class="small muted">${here ? 'Orbit is on this address: one tap puts your SAT date, readiness and the next two weeks of study into it.' : 'Put your SAT date, readiness and the next two weeks of study into your Orbit planner as a file Orbit can import.'}</p>
     <div class="row wrap" style="margin-top:12px"><button class="btn sm primary" data-act="orbit-send">${icon('send', 14)} ${here ? 'Send to Orbit' : 'Save for Orbit'}</button><a class="btn sm ghost" href="#/plan">Options</a></div>
-    ${last ? html`<div class="tiny faint" style="margin-top:8px">Last sent ${relDay(ymd(new Date(last))).toLowerCase()}</div>` : ''}</section>`;
+    ${last ? html`<div class="tiny faint" style="margin-top:8px">Last sent ${relDayLow(ymd(new Date(last)))}</div>` : ''}</section>`;
 }
 
 /* ═════ PRACTICE ═════ */
@@ -151,7 +151,7 @@ VIEWS.review = () => {
   </div>
   ${reasons.length ? html`<section class="card" style="margin-bottom:18px"><h3 class="h3" style="margin-bottom:10px">Why you miss questions</h3><div class="col" style="gap:8px">${reasons.map(([l, n]) => html`<div class="row"><span style="width:200px" class="small">${l}</span><div class="grow">${bar(n / all.length)}</div><span class="small faint num" style="width:30px;text-align:right">${n}</span></div>`)}</div></section>` : ''}
   <div class="spread" style="margin-bottom:10px"><div class="seg"><button class="${ui.reviewFilter === 'due' ? 'on' : ''}" data-act="ui" data-k="reviewFilter" data-v="due">Due (${due.length})</button><button class="${ui.reviewFilter === 'all' ? 'on' : ''}" data-act="ui" data-k="reviewFilter" data-v="all">All (${all.length})</button></div></div>
-  <section class="card">${list.length ? html`<div class="list">${list.map(m => { const s = SKILL[m.s]; return html`<button class="list-row" data-act="open-mistake" data-key="${m.key}"><span class="dot" style="--c:${secColor(secOf(m.s))}"></span><div class="grow"><div style="font-weight:600">${s ? s.name : m.s}</div><div class="tiny faint">Missed ${relDay(m.added).toLowerCase()}${m.misses > 1 ? ` · ${m.misses} times` : ''}${m.reason ? ' · ' + REASONS.find(r => r[0] === m.reason)[1] : ''}</div></div><span class="pips">${[0, 1, 2, 3, 4].map(i => html`<i class="${i < m.box ? 'on' : ''}"></i>`)}</span><span class="small ${m.due <= todayStr() ? '' : 'faint'}" style="width:80px;text-align:right">${m.due <= todayStr() ? 'Due' : relDay(m.due)}</span></button>`; })}</div>`
+  <section class="card">${list.length ? html`<div class="list">${list.map(m => { const s = SKILL[m.s]; return html`<button class="list-row" data-act="open-mistake" data-key="${m.key}"><span class="dot" style="--c:${secColor(secOf(m.s))}"></span><div class="grow"><div style="font-weight:600">${s ? s.name : m.s}</div><div class="tiny faint">Missed ${relDayLow(m.added)}${m.misses > 1 ? ` · ${m.misses} times` : ''}${m.reason ? ' · ' + REASONS.find(r => r[0] === m.reason)[1] : ''}</div></div><span class="pips">${[0, 1, 2, 3, 4].map(i => html`<i class="${i < m.box ? 'on' : ''}"></i>`)}</span><span class="small ${m.due <= todayStr() ? '' : 'faint'}" style="width:80px;text-align:right">${m.due <= todayStr() ? 'Due' : relDay(m.due)}</span></button>`; })}</div>`
     : html`<div class="empty">${icon('check', 30)}<div class="h2">${ui.reviewFilter === 'due' ? 'Nothing due' : 'No missed questions yet'}</div><p>${ui.reviewFilter === 'due' ? 'Come back tomorrow, or practice something new.' : 'Questions you miss in practice land here automatically.'}</p></div>`}</section>`;
 };
 
@@ -197,6 +197,10 @@ function lineChart(series, { h = 200, min = 400, max = 1600, target } = {}) {
   const W = 640, L = 40, B = 24, T = 10;
   const days = [...new Set(series.flatMap(s => s.pts.map(p => p[0])))].sort();
   if (days.length < 2) return html`<p class="small faint">The chart appears after you have practiced on two different days.</p>`;
+  /* zoom to the scores actually reached (and the target), so real progress is visible */
+  const vals = series.flatMap(s => s.pts.map(p => p[1])).concat(target ? [target] : []);
+  min = Math.max(min, Math.floor((Math.min(...vals) - 60) / 100) * 100); max = Math.min(max, Math.ceil((Math.max(...vals) + 60) / 100) * 100);
+  const step = Math.ceil((max - min) / 4 / 50) * 50; max = min + step * 4;
   const x = d => L + (W - L - 10) * days.indexOf(d) / (days.length - 1), y = v => h - B - (h - B - T) * (v - min) / (max - min);
   let g = '';
   for (let i = 0; i <= 4; i++) { const v = min + (max - min) * i / 4; g += `<line x1="${L}" x2="${W - 10}" y1="${y(v)}" y2="${y(v)}" class="grid"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${Math.round(v)}</text>`; }

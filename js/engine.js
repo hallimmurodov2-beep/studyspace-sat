@@ -270,9 +270,12 @@ function buildModule(sec, n, path, exclude) {
     const sk = shuffle(skillsIn(d.id));
     for (let k = 0; k < counts[i]; k++) {
       const skill = sk[k % sk.length].id, want = diffs[k % 3];
-      const [id] = pickQuestions(skill, 1, { diff: want, exclude });
-      if (id) { exclude.add(id); items.push(id); }
-      else { const [alt] = pickQuestions(skill, 1, { diff: want }); items.push(alt); }
+      /* when a skill's questions run out, borrow from its domain, then from the whole section, before ever repeating */
+      const tries = [skill, ...sk.map(s => s.id), ...shuffle(SKILLS.filter(s => secOf(s.id) === sec)).map(s => s.id)];
+      let id = null;
+      for (const s of tries) { [id] = pickQuestions(s, 1, { diff: want, exclude }); if (id) break; }
+      if (!id) [id] = pickQuestions(skill, 1, { diff: want });
+      exclude.add(id); items.push(id);
     }
   });
   /* like the real test: Reading and Writing is grouped by question type (each group easier → harder);
