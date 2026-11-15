@@ -1,0 +1,21 @@
+{
+  "name": "Studyspace SAT",
+  "short_name": "SAT",
+  "description": "A calm, adaptive Digital SAT study app: daily plan, practice, mistake review and practice tests. Works offline.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0b0d13",
+  "theme_color": "#0b0d13",
+  "icons": [
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Today", "url": "./index.html#/today" },
+    { "name": "Review", "url": "./index.html#/review" },
+    { "name": "Practice", "url": "./index.html#/practice" }
+  ]
+}
