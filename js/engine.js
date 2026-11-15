@@ -68,6 +68,15 @@ function predictTotal() {
   const rw = predictSection('rw'), m = predictSection('math');
   return { score: rw.score + m.score, lo: rw.lo + m.lo, hi: rw.hi + m.hi, rw, math: m, n: rw.n + m.n };
 }
+/* pace toward the target: points per week still needed vs. points per week gained lately (from daily snapshots) */
+function paceToTarget() {
+  const p = predictTotal(), T = S.profile.target, days = daysToTest();
+  const hist = Object.entries(S.history).filter(([d]) => diffDays(todayStr(), d) <= 21).sort(([a], [b]) => a.localeCompare(b));
+  let trend = null;
+  if (hist.length >= 2) { const [d0, v0] = hist[0], [d1, v1] = hist[hist.length - 1], span = diffDays(d1, d0); if (span >= 5) trend = Math.round((v1.rw + v1.math - v0.rw - v0.math) / span * 7); }
+  const need = days != null && days > 0 && p.score < T ? Math.ceil((T - p.score) / (days / 7)) : 0;
+  return { need, trend, reached: p.score >= T, weeks: days != null ? Math.max(0, Math.round(days / 7)) : null };
+}
 function snapshotPrediction() {
   const p = predictTotal();
   S.history[todayStr()] = { rw: p.rw.score, math: p.math.score };

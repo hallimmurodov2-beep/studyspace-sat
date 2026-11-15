@@ -125,6 +125,7 @@ Object.assign(ACT, {
   'p-submit': () => { const s = sess(); closeModal(); const left = s.items.filter((_, i) => { const x = s.resp[i]; return !x || (x.pick == null && !x.input); }).length; if (left) confirmBox(`${plural(left, 'question')} unanswered`, 'Unanswered questions count as wrong. There is no penalty for guessing on the SAT — it is always worth answering.', 'Submit anyway', () => finishSession()); else finishSession(); },
   'p-quit': () => quitSession(),
   'p-calc': () => { pui.calc = !pui.calc; renderPlayer(); },
+  'p-hl': () => { pui.hl = !pui.hl; renderPlayer(); if (pui.hl) toast('Select text in the passage to highlight it. Tap a highlight to remove it.'); },
   'p-begin': () => beginModule(),
   'p-showtimer': () => { commit(s => { s.settings.showTimer = true; }, { quiet: true }); renderPlayer(); },
   'p-reason': () => { const it = curItem(); const key = mistakeKey(it.q); if (!S.mistakes[key]) return; const md = modal(html`<div class="modal-head"><h2 class="h2">Why did you miss it?</h2><button class="btn icon sm ghost" data-act="close-modal">${icon('x', 16)}</button></div><p class="small muted">Naming the reason is one of the fastest ways to stop repeating it. It also shows up in Review.</p>${reasonPicker(key)}<div class="modal-foot"><button class="btn primary" data-act="close-modal">Done</button></div>`); bindNotes(md); },
@@ -182,6 +183,7 @@ document.addEventListener('keydown', e => {
     if (e.key === 'ArrowLeft' && !learn) return go(-1);
     if (e.key.toLowerCase() === 'f' && !learn) return ACT['p-flag']();
     if (e.key.toLowerCase() === 'c' && q.sec === 'math') return ACT['p-calc']();
+    if (e.key.toLowerCase() === 'h' && q.passage) return ACT['p-hl']();
     if (e.key.toLowerCase() === 'r' && q.sec === 'math') return ACT.reference();
     return;
   }

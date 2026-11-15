@@ -16,6 +16,10 @@ function scoreCard(compact) {
     <div class="row" style="align-items:flex-end;gap:14px"><div class="big">${p.score}</div><div class="muted small" style="padding-bottom:6px">likely ${p.lo}–${p.hi}</div></div>
     <div class="score-range" title="Your likely range, with your target marked"><i style="left:${pos(p.lo)}%;right:${100 - pos(p.hi)}%"></i><b style="left:${pos(p.score)}%"></b><u style="left:${pos(T)}%"></u></div>
     <div class="spread tiny faint"><span>400</span><span>Target ${T}${p.score >= T ? ' · on track' : ` · ${T - p.score} to go`}</span><span>1600</span></div>
+    ${(() => { const pc = paceToTarget(); if (pc.reached) return html`<div class="note accent small" style="margin-top:12px">You are at your target. Keep the skills warm, and consider raising it in Plan.</div>`;
+      if (!pc.need) return '';
+      const ok = pc.trend != null && pc.trend >= pc.need;
+      return html`<div class="note small" style="margin-top:12px"><b>+${pc.need} points a week</b> reaches ${T} by test day.${pc.trend != null ? html` Lately: <b style="color:${ok ? 'var(--ok)' : 'var(--warn)'}">${pc.trend >= 0 ? '+' : ''}${pc.trend} a week</b>${ok ? ' — on pace.' : ' — add a little time or a practice test.'}` : ' Your recent trend appears after a week of practice.'}</div>`; })()}
     ${compact ? '' : html`<hr class="sep"><div class="grid g2" style="gap:12px">
       ${['rw', 'math'].map(sec => html`<div><div class="row small"><span class="dot" style="--c:${secColor(sec)}"></span><b>${SECTIONS[sec].name}</b></div><div class="kpi" style="margin-top:6px"><b>${p[sec].score}</b><span>${p[sec].lo}–${p[sec].hi}</span></div></div>`)}
     </div>

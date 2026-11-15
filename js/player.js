@@ -7,7 +7,29 @@
 const LETTERS = ['A', 'B', 'C', 'D'];
 const qCache = new Map();
 const Q = id => { if (!qCache.has(id)) qCache.set(id, getQ(id)); return qCache.get(id); };
-const pui = { calc: false, nav: false, elimMode: false };
+const pui = { calc: false, nav: false, elimMode: false, hl: false };
+
+/* ── highlighter: select text in the passage to mark it (kept per question); tap a mark to remove it ── */
+function savePassage() { const p = $('#passage'); if (p && S.session) { curResp().hl = p.innerHTML; save(); } }
+function highlightSelection() {
+  const p = $('#passage'), sel = getSelection();
+  if (!p || !sel || sel.isCollapsed || !sel.rangeCount) return;
+  const range = sel.getRangeAt(0);
+  if (!p.contains(range.commonAncestorContainer) || !range.toString().trim()) return;
+  const mark = document.createElement('mark');
+  mark.appendChild(range.extractContents());
+  mark.querySelectorAll('mark').forEach(m => m.replaceWith(...m.childNodes));          // no marks inside marks
+  range.insertNode(mark);
+  sel.removeAllRanges(); p.normalize(); savePassage();
+}
+const onSelectEnd = () => setTimeout(() => { if (pui.hl && S.session) highlightSelection(); }, 10);
+document.addEventListener('mouseup', e => { if (e.target.closest && e.target.closest('#passage')) onSelectEnd(); });
+document.addEventListener('touchend', e => { if (e.target.closest && e.target.closest('#passage')) setTimeout(onSelectEnd, 250); });
+document.addEventListener('click', e => {
+  const m = e.target.closest && e.target.closest('#passage mark');
+  if (!m || !pui.hl || !getSelection().isCollapsed) return;
+  m.replaceWith(...m.childNodes); $('#passage').normalize(); savePassage();
+});
 
 /* ── starting sessions ── */
 function startSession(o) {
@@ -189,12 +211,13 @@ function renderPlayer() {
     <div class="p-top"><button class="btn icon sm ghost" data-act="p-quit" title="Leave">${icon('x', 18)}</button>
       <div class="p-title grow">${label}<div class="tiny faint">Question ${s.i + 1} of ${s.items.length}${learn ? '' : ` · ${answered} answered`}</div></div>
       ${s.endsAt && S.settings.showTimer ? html`<span class="p-timer" id="p-timer">${fmtClock((s.endsAt - Date.now()) / 1000)}</span>` : s.endsAt ? html`<button class="btn sm ghost" data-act="p-showtimer">Show time</button>` : ''}
+      ${hasPassage ? html`<button class="btn sm ${pui.hl ? 'soft' : 'ghost'}" data-act="p-hl" title="Highlight the passage (H) — select text to mark it, tap a mark to remove it">${icon('pen', 15)}<span class="hide-sm">${pui.hl ? 'Highlighting' : 'Highlight'}</span></button>` : ''}
       ${mathQ ? html`<button class="btn sm ${pui.calc ? 'soft' : 'ghost'}" data-act="p-calc" title="Desmos calculator (C)">${icon('calc', 15)}<span class="hide-sm">Calculator</span></button><button class="btn sm ghost" data-act="reference" title="Reference sheet (R)">${icon('ref', 15)}<span class="hide-sm">Reference</span></button>` : ''}
       ${!learn ? html`<button class="btn sm ghost" data-act="p-nav">${icon('grid', 15)}<span class="hide-sm">Questions</span></button>` : ''}
     </div>
     <div class="p-progress"><i style="width:${Math.round(100 * (s.i + (r.checked ? 1 : 0)) / s.items.length)}%"></i></div>
     <div class="p-body ${hasPassage ? '' : 'single'} ${pui.calc && mathQ ? 'with-calc' : ''} ${pui.calc && mathQ && hasPassage ? 'split' : ''}">
-      ${hasPassage ? html`<div class="p-pane"><div class="passage">${raw(q.passage)}</div></div>` : ''}
+      ${hasPassage ? html`<div class="p-pane"><div class="passage ${pui.hl ? 'hl-on' : ''}" id="passage">${raw(r.hl || q.passage)}</div></div>` : ''}
       <div class="p-pane" id="q-pane">${questionHTML(q, r, s.i, learn)}</div>
       ${pui.calc && mathQ ? html`<div class="calc-pane"><iframe src="https://www.desmos.com/calculator?embed" title="Desmos graphing calculator" loading="lazy"></iframe><div class="tiny faint" style="padding:6px 10px">Desmos is built into the real test too. <a href="https://www.desmos.com/calculator" target="_blank" rel="noopener" style="text-decoration:underline">Open in a new tab</a> if it does not load.</div></div>` : ''}
     </div>
