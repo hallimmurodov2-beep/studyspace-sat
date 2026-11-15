@@ -104,6 +104,8 @@ Object.assign(ACT, {
   export: () => { download(`studyspace-sat-backup-${todayStr()}.json`, exportJSON()); toast('Backup saved.'); },
   import: () => pickFile(t => { const err = importJSON(t); toast(err || 'Backup restored.'); }),
   reset: () => confirmBox('Start over?', 'This deletes all progress, mistakes and test results in this browser. Export a backup first if you might want them back.', 'Delete everything', () => { localStorage.removeItem(STORE_KEY); S = freshState(); wz.step = 0; applyTheme(); renderAll(); }, true),
+  'vq-pick': el => { const v = ui.vq; if (!v || v.picked != null) return; v.picked = el.dataset.w; v.ok = v.picked === v.word; rerender(); },
+  'vq-next': () => { const v = ui.vq; if (!v || v.picked == null) return; ui.vq = null; commit(() => gradeWord(v.word, v.ok ? 2 : 0)); },
   flip: () => { ui.vocabFlip = !ui.vocabFlip; rerender(); },
   'grade-word': el => { const cur = vocabQueue(10)[0]; if (!cur) return; ui.vocabFlip = false; commit(() => gradeWord(cur[0], +el.dataset.g)); },
   'open-mistake': el => { const key = el.dataset.key, m = S.mistakes[key]; if (!m) return; const md = showQuestionModal(m.q, null, html`${reasonPicker(key)}<div class="modal-foot"><button class="btn danger" data-act="del-mistake" data-key="${key}">${icon('trash', 14)} Remove</button><button class="btn primary" data-act="review-one" data-key="${key}">${icon('play', 14)} Try it again</button></div>`); bindNotes(md); },
@@ -124,7 +126,10 @@ Object.assign(ACT, {
   'p-jump': el => { closeModal(); jump(+el.dataset.i); },
   'p-submit': () => { const s = sess(); closeModal(); const left = s.items.filter((_, i) => { const x = s.resp[i]; return !x || (x.pick == null && !x.input); }).length; if (left) confirmBox(`${plural(left, 'question')} unanswered`, 'Unanswered questions count as wrong. There is no penalty for guessing on the SAT — it is always worth answering.', 'Submit anyway', () => finishSession()); else finishSession(); },
   'p-quit': () => quitSession(),
-  'p-calc': () => { pui.calc = !pui.calc; renderPlayer(); },
+  'p-calc': () => { pui.calc = !pui.calc; renderPlayer(); if (pui.calc && pui.calcMode === 'basic') setTimeout(() => { const n = $('#calc-in'); if (n) n.focus(); }, 30); },
+  'calc-mode': el => { pui.calcMode = el.dataset.v; renderPlayer(); },
+  'calc-deg': () => { pui.deg = !pui.deg; renderPlayer(); },
+  'calc-use': el => { const n = $('#calc-in'); if (n) { n.value += el.dataset.v; n.focus(); } },
   'p-hl': () => { pui.hl = !pui.hl; renderPlayer(); if (pui.hl) toast('Select text in the passage to highlight it. Tap a highlight to remove it.'); },
   'p-begin': () => beginModule(),
   'p-showtimer': () => { commit(s => { s.settings.showTimer = true; }, { quiet: true }); renderPlayer(); },
@@ -171,6 +176,7 @@ document.addEventListener('keydown', e => {
   if (e.metaKey || e.ctrlKey || e.altKey) return;
   const tag = (e.target.tagName || '').toLowerCase(), typing = tag === 'input' || tag === 'textarea' || tag === 'select';
   if (e.key === 'Escape') { if (modals.length) { closeModal(); e.preventDefault(); } return; }
+  if (e.target.id === 'calc-in') { if (e.key === 'Enter') { e.preventDefault(); calcRun(); } return; }
   if (modals.length) return;
   const s = S.session;
   if (s && !(s.kind === 'test' && s.phase === 'intro')) {
@@ -188,6 +194,12 @@ document.addEventListener('keydown', e => {
     return;
   }
   if (typing) return;
+  if (route.view === 'vocab' && vocabQueue(10)[0] && ui.vocabMode === 'quiz' && ui.vq) {
+    const k = 'abcd'.indexOf(e.key.toLowerCase()), n = '1234'.indexOf(e.key), i = k >= 0 ? k : n;
+    if (ui.vq.picked == null && i >= 0) { e.preventDefault(); ACT['vq-pick']({ dataset: { w: ui.vq.choices[i] } }); return; }
+    if (ui.vq.picked != null && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); ACT['vq-next'](); return; }
+    return;
+  }
   if (route.view === 'vocab' && vocabQueue(10)[0]) {
     if (e.key === ' ') { e.preventDefault(); ACT.flip(); return; }
     if (ui.vocabFlip && '123'.includes(e.key)) { ACT['grade-word']({ dataset: { g: String(+e.key - 1) } }); }

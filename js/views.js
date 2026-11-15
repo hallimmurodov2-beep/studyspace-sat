@@ -3,7 +3,7 @@
 
 const VIEWS = {};
 const ACT = {};
-const ui = { sec: 'both', count: 10, mode: 'learn', diff: 0, learnSec: 'rw', vocabFlip: false, vocabSearch: '', reviewFilter: 'due', progSec: 'rw' };
+const ui = { sec: 'both', count: 10, mode: 'learn', diff: 0, learnSec: 'rw', vocabFlip: false, vocabSearch: '', vocabMode: 'quiz', vq: null, reviewFilter: 'due', progSec: 'rw' };
 
 const greeting = () => { const h = new Date().getHours(); return h < 5 ? 'Good night' : h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening'; };
 const countdown = () => { const n = daysToTest(); return n == null ? '' : n > 0 ? `${plural(n, 'day')} to the SAT` : n === 0 ? 'Test day — you are ready' : 'Test date has passed'; };
@@ -167,8 +167,10 @@ VIEWS.vocab = () => {
   return html`
   <div class="page-head"><div><h1 class="h1">Vocabulary</h1><div class="sub">${VOCAB.length} words that show up in Words in Context questions — each with a sentence that shows how it is used. Ten new words a day; the rest come back when you are about to forget them.</div></div></div>
   <div class="grid g-main">
-    <section class="card">${cur ? html`
-      <div class="spread"><span class="small faint">${plural(q.length, 'card')} left today</span><span class="chip">${S.vocab[cur[0]] ? 'Review' : 'New'}</span></div>
+    <section class="card">
+      <div class="spread" style="margin-bottom:12px"><div class="seg"><button class="${ui.vocabMode === 'quiz' ? 'on' : ''}" data-act="ui" data-k="vocabMode" data-v="quiz">Fill the blank</button><button class="${ui.vocabMode === 'cards' ? 'on' : ''}" data-act="ui" data-k="vocabMode" data-v="cards">Flashcards</button></div>${cur ? html`<span class="chip">${S.vocab[cur[0]] ? 'Review' : 'New'}</span>` : ''}</div>
+      ${cur && ui.vocabMode === 'quiz' ? vocabQuizCard(cur, q.length) : cur ? html`
+      <div class="spread"><span class="small faint">${plural(q.length, 'card')} left today</span></div>
       <div class="flash" data-act="flip">
         <div class="word">${cur[0]}</div><div class="faint small">${cur[1]}</div>
         ${ui.vocabFlip ? html`<div class="def">${cur[2]}</div><div class="ex">“${cur[3]}”</div>` : html`<div class="small faint" style="margin-top:12px">Say what it means, then tap (or press Space)</div>`}
@@ -182,6 +184,16 @@ VIEWS.vocab = () => {
       <div class="list" style="max-height:420px;overflow-y:auto;margin-top:8px">${shown.map(([w, p, d]) => { const v = S.vocab[w]; return html`<div class="list-row"><div class="grow"><b>${w}</b> <span class="tiny faint">${p}</span><div class="small muted">${d}</div></div>${v ? html`<span class="pips">${[1, 2, 3, 4, 5].map(i => html`<i class="${i <= v.box ? 'on' : ''}"></i>`)}</span>` : ''}</div>`; })}</div></section>
   </div>`;
 };
+
+function vocabQuizCard(cur, left) {
+  if (!ui.vq || ui.vq.word !== cur[0]) ui.vq = vocabQuiz(cur[0]);
+  const v = ui.vq, done = v.picked != null;
+  return html`<div class="small faint" style="margin-bottom:10px">${plural(left, 'word')} left today · which word fits? (it may appear in another form)</div>
+    <p class="passage" style="font-size:20px;margin:6px 0 18px">${v.sentence}</p>
+    <div class="choices">${v.choices.map((w, k) => html`<div class="choice ${done ? (w === v.word ? 'right' : w === v.picked ? 'wrong' : '') : ''}"><button class="choice-btn" data-act="vq-pick" data-w="${w}"><span class="letter">${LETTERS[k]}</span><span>${w}</span></button></div>`)}</div>
+    ${done ? html`<div class="feedback ${v.picked === v.word ? 'ok' : 'no'}"><div class="h3" style="color:${v.picked === v.word ? 'var(--ok)' : 'var(--danger)'}">${icon(v.picked === v.word ? 'check' : 'x', 18)} <b>${v.word}</b> <span class="tiny faint">${v.pos}</span></div><p>${v.def}</p></div>
+      <div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn primary" data-act="vq-next" id="vq-next">Next word <kbd>Enter</kbd></button></div>` : ''}`;
+}
 
 /* ═════ TESTS ═════ */
 VIEWS.tests = () => {
@@ -299,6 +311,9 @@ VIEWS.results = () => {
   if (!R) return html`<div class="empty"><div class="h2">No results to show</div><a class="btn" href="#/today">Back to Today</a></div>`;
   const ok = R.items.filter(x => x.ok).length, n = R.items.length, secs = sum(R.items, x => x.t);
   const skills = [...new Set(R.items.filter(x => !x.ok).map(x => x.skill))];
+  /* time sinks: questions that took far longer than the test allows on average */
+  const paceOf = x => SECTIONS[secOf(x.skill)].pace, slow = R.items.filter(x => x.t >= 60 && x.t > paceOf(x) * 1.6);
+  const over = Math.round(sum(slow, x => x.t - paceOf(x)) / 60), slowWrong = slow.filter(x => !x.ok).length;
   return html`
   <div class="page-head"><div><div class="eyebrow">${R.when ? fmtDate(R.when, true) : 'Results'}</div><h1 class="h1">${R.title}</h1></div><div class="row wrap"><a class="btn" href="#/today">Back to Today</a>${skills.length ? html`<button class="btn primary" data-act="practice-missed">${icon('redo', 15)} Practice what I missed</button>` : ''}</div></div>
   <section class="card" style="margin-bottom:16px"><div class="result-hero">${ring(n ? ok / n : 0, 120, 11, ok / Math.max(1, n) >= 0.7 ? 'var(--ok)' : 'var(--accent)', n ? pct(ok / n) : '—')}
@@ -307,7 +322,8 @@ VIEWS.results = () => {
       ${R.total ? html`<div class="kpi"><b>${R.total}</b><span>estimated total</span></div>` : ''}
       <div class="kpi"><b>${ok}/${n}</b><span>correct</span></div><div class="kpi"><b>${fmtClock(secs)}</b><span>time · ${n ? Math.round(secs / n) : 0} s per question</span></div>
     </div></div>
-    ${R.note ? html`<p class="small muted" style="margin-top:14px">${R.note}</p>` : ''}</section>
+    ${R.note ? html`<p class="small muted" style="margin-top:14px">${R.note}</p>` : ''}
+    ${slow.length ? html`<div class="note" style="margin-top:14px">${icon('clock', 15, 'inl')} <b>${plural(slow.length, 'question')}</b> took much longer than test pace${over ? html` — about <b>${fmtMin(over)}</b> beyond it` : ''}${slowWrong ? html`, and ${slowWrong} of them still ended wrong` : ''}. On the real test, mark a question like that, guess, and come back to it at the end.</div>` : ''}</section>
   <section class="card"><h2 class="h2" style="margin-bottom:8px">Question by question</h2><p class="small faint" style="margin-bottom:8px">Tap any question to see it again with the explanation.</p>
-    ${R.items.map((x, i) => { const s = SKILL[x.skill]; return html`<button class="qrow" style="width:100%;text-align:left" data-act="open-result" data-i="${i}"><span class="qbadge ${x.skipped ? 'skip' : x.ok ? 'ok' : 'no'}">${i + 1}</span><div class="grow" style="min-width:0"><div style="font-weight:600">${s ? s.name : ''}</div><div class="tiny faint">${['', 'Easy', 'Medium', 'Hard'][x.d] || ''} · ${x.t}s${x.skipped ? ' · not answered' : ''}</div></div>${secChip(secOf(x.skill))}</button>`; })}</section>`;
+    ${R.items.map((x, i) => { const s = SKILL[x.skill]; return html`<button class="qrow" style="width:100%;text-align:left" data-act="open-result" data-i="${i}"><span class="qbadge ${x.skipped ? 'skip' : x.ok ? 'ok' : 'no'}">${i + 1}</span><div class="grow" style="min-width:0"><div style="font-weight:600">${s ? s.name : ''}</div><div class="tiny faint">${['', 'Easy', 'Medium', 'Hard'][x.d] || ''} · ${x.t}s${x.skipped ? ' · not answered' : ''}</div></div>${slow.includes(x) ? html`<span class="chip warn">slow</span>` : ''}${secChip(secOf(x.skill))}</button>`; })}</section>`;
 };

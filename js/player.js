@@ -7,7 +7,24 @@
 const LETTERS = ['A', 'B', 'C', 'D'];
 const qCache = new Map();
 const Q = id => { if (!qCache.has(id)) qCache.set(id, getQ(id)); return qCache.get(id); };
-const pui = { calc: false, nav: false, elimMode: false, hl: false };
+const pui = { calc: false, nav: false, elimMode: false, hl: false, calcMode: navigator.onLine === false ? 'basic' : 'desmos', deg: true, calcHist: [] };
+
+/* the calculator panel: Desmos when online (as on the real test), a built-in one that always works */
+function calcPane() {
+  const tabs = html`<div class="row" style="padding:8px 10px;border-bottom:1px solid var(--line)"><div class="seg"><button class="${pui.calcMode === 'desmos' ? 'on' : ''}" data-act="calc-mode" data-v="desmos">Desmos</button><button class="${pui.calcMode === 'basic' ? 'on' : ''}" data-act="calc-mode" data-v="basic">Basic</button></div>
+    ${pui.calcMode === 'basic' ? html`<span class="grow"></span><button class="btn sm ghost" data-act="calc-deg">${pui.deg ? 'Degrees' : 'Radians'}</button>` : ''}</div>`;
+  if (pui.calcMode === 'desmos') return html`<div class="calc-pane">${tabs}<iframe src="https://www.desmos.com/calculator?embed" title="Desmos graphing calculator" loading="lazy"></iframe><div class="tiny faint" style="padding:6px 10px">Needs internet. Offline? Switch to <b>Basic</b>. <a href="https://www.desmos.com/calculator" target="_blank" rel="noopener" style="text-decoration:underline">Open Desmos in a tab</a></div></div>`;
+  return html`<div class="calc-pane basic-calc">${tabs}
+    <div class="calc-hist" id="calc-hist">${pui.calcHist.length ? pui.calcHist.map(h => html`<button class="calc-row" data-act="calc-use" data-v="${h.r}" title="Use this result"><span class="faint">${h.x}</span><b class="${h.err ? 'err' : ''}">${h.err ? h.err : '= ' + h.r}</b></button>`) : html`<p class="small faint" style="padding:14px">Type an expression and press Enter: <span class="m">2(3.5 + 4)^2</span>, <span class="m">sqrt(50)</span>, <span class="m">3pi</span>, <span class="m">sin(30)</span>. Tap a result to reuse it.</p>`}</div>
+    <input class="input" id="calc-in" autocomplete="off" spellcheck="false" placeholder="Expression…" style="margin:10px;width:auto;font:500 17px var(--mono)"></div>`;
+}
+function calcRun() {
+  const inp = $('#calc-in'); if (!inp || !inp.value.trim()) return;
+  const x = inp.value.trim(); let r = '', err = '';
+  try { r = String(calc(x, pui.deg)); } catch (e) { err = e.message; }
+  pui.calcHist.push({ x, r, err }); if (pui.calcHist.length > 30) pui.calcHist.shift();
+  renderPlayer(); const n = $('#calc-in'); if (n) { n.value = err ? x : ''; n.focus(); } const h = $('#calc-hist'); if (h) h.scrollTop = h.scrollHeight;
+}
 
 /* ── highlighter: select text in the passage to mark it (kept per question); tap a mark to remove it ── */
 function savePassage() { const p = $('#passage'); if (p && S.session) { curResp().hl = p.innerHTML; save(); } }
@@ -219,7 +236,7 @@ function renderPlayer() {
     <div class="p-body ${hasPassage ? '' : 'single'} ${pui.calc && mathQ ? 'with-calc' : ''} ${pui.calc && mathQ && hasPassage ? 'split' : ''}">
       ${hasPassage ? html`<div class="p-pane"><div class="passage ${pui.hl ? 'hl-on' : ''}" id="passage">${raw(r.hl || q.passage)}</div></div>` : ''}
       <div class="p-pane" id="q-pane">${questionHTML(q, r, s.i, learn)}</div>
-      ${pui.calc && mathQ ? html`<div class="calc-pane"><iframe src="https://www.desmos.com/calculator?embed" title="Desmos graphing calculator" loading="lazy"></iframe><div class="tiny faint" style="padding:6px 10px">Desmos is built into the real test too. <a href="https://www.desmos.com/calculator" target="_blank" rel="noopener" style="text-decoration:underline">Open in a new tab</a> if it does not load.</div></div>` : ''}
+      ${pui.calc && mathQ ? calcPane() : ''}
     </div>
     <div class="p-bottom">
       ${learn ? html`<span class="small faint grow hide-sm">${r.checked ? 'Enter for the next question' : 'Pick an answer, then Check (Enter)'}</span>

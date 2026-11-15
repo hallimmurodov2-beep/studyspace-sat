@@ -206,6 +206,23 @@ function gradeWord(word, grade) {                       // grade: 0 again · 1 h
   const L = S.log[todayStr()] || (S.log[todayStr()] = { sec: 0, q: 0, ok: 0, cards: 0, done: false });
   L.cards++; L.sec += 8; if (isNew) L.newWords = (L.newWords || 0) + 1;
 }
+/* fill the blank: the word's own example sentence with the word taken out, and three other words of the same kind */
+function blankSentence(word, ex) {
+  const stem = word.toLowerCase().slice(0, Math.max(4, word.length - (word.endsWith('e') ? 1 : 2)));
+  const m = ex.match(new RegExp('\\b(' + stem + '[a-z]*)\\b', 'i'));
+  return m ? ex.replace(m[0], '______').replace(/\b(a|an) ______/i, (x, art) => (art[0] === 'A' ? 'A(n)' : 'a(n)') + ' ______') : null;
+}
+function vocabQuiz(word, rnd = Math.random) {
+  const v = VOCAB.find(x => x[0] === word); if (!v) return null;
+  /* never offer a near-synonym as a "wrong" choice: skip words whose meanings share a content word */
+  const STOP = new Set(['that', 'with', 'from', 'into', 'than', 'very', 'make', 'something', 'someone', 'able', 'about', 'what', 'have', 'over', 'only', 'more', 'most']);
+  const words = d => new Set(d.toLowerCase().match(/[a-z]{4,}/g).filter(w => !STOP.has(w)));
+  const mine = words(v[2]);
+  const fine = x => x[0] !== word && ![...words(x[2])].some(w => mine.has(w));
+  const same = shuffle(VOCAB.filter(x => fine(x) && x[1] === v[1]), rnd), any = shuffle(VOCAB.filter(x => fine(x) && x[1] !== v[1]), rnd);
+  const others = [...same, ...any].slice(0, 3).map(x => x[0]);
+  return { word, pos: v[1], def: v[2], sentence: blankSentence(word, v[3]), choices: shuffle([word, ...others], rnd), picked: null };
+}
 const wordsKnown = () => Object.values(S.vocab).filter(v => v.box >= 3).length;
 
 /* ── the study plan ── */

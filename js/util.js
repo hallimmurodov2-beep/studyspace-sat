@@ -139,3 +139,39 @@ function pickFile(cb) {
   inp.onchange = () => { const f = inp.files[0]; if (!f) return; const r = new FileReader(); r.onload = () => cb(String(r.result)); r.readAsText(f); };
   inp.click();
 }
+
+/* ── a small, safe calculator (no eval): + − × ÷ ^ ( ), √ and trig, π and e, implicit multiplication (2π, 3(4)) ── */
+function calc(src, deg = true) {
+  const s = String(src).toLowerCase().replace(/\s+/g, '').replace(/[×·]/g, '*').replace(/÷/g, '/').replace(/−/g, '-').replace(/π/g, 'pi').replace(/√/g, 'sqrt');
+  const toks = [];
+  for (let i = 0; i < s.length;) {
+    const m = s.slice(i).match(/^(\d+\.?\d*(?:e[+-]?\d+)?|\.\d+|sqrt|sin|cos|tan|abs|ln|log|pi|e|[-+*/^(),])/);
+    if (!m) throw new Error('Unknown symbol: ' + s[i]);
+    toks.push(m[0]); i += m[0].length;
+  }
+  const isVal = t => /^[\d.]/.test(t) || t === 'pi' || t === 'e' || t === ')';
+  const isStart = t => /^[\d.]/.test(t) || t === 'pi' || t === 'e' || t === '(' || /^(sqrt|sin|cos|tan|abs|ln|log)$/.test(t);
+  const T = []; toks.forEach((t, i) => { if (i && isVal(toks[i - 1]) && isStart(t)) T.push('*'); T.push(t); });
+  let p = 0;
+  const peek = () => T[p], take = () => T[p++];
+  const k = deg ? Math.PI / 180 : 1;
+  const F = { sqrt: Math.sqrt, sin: x => Math.sin(x * k), cos: x => Math.cos(x * k), tan: x => Math.tan(x * k), abs: Math.abs, ln: Math.log, log: Math.log10 };
+  function expr() { let v = term(); while (peek() === '+' || peek() === '-') v = take() === '+' ? v + term() : v - term(); return v; }
+  function term() { let v = unary(); while (peek() === '*' || peek() === '/') v = take() === '*' ? v * unary() : v / unary(); return v; }
+  function unary() { if (peek() === '-') { take(); return -unary(); } if (peek() === '+') { take(); return unary(); } return power(); }
+  function power() { const b = atom(); if (peek() === '^') { take(); return Math.pow(b, unary()); } return b; }
+  function atom() {
+    const t = take();
+    if (t === undefined) throw new Error('Unfinished expression');
+    if (/^[\d.]/.test(t)) return parseFloat(t);
+    if (t === 'pi') return Math.PI;
+    if (t === 'e') return Math.E;
+    if (t === '(') { const v = expr(); if (take() !== ')') throw new Error('Missing )'); return v; }
+    if (F[t]) { const hasP = peek() === '('; const v = hasP ? (take(), expr()) : power(); if (hasP && take() !== ')') throw new Error('Missing )'); return F[t](v); }
+    throw new Error('Unexpected ' + t);
+  }
+  const v = expr();
+  if (p < T.length) throw new Error('Unexpected ' + T[p]);
+  if (!isFinite(v)) throw new Error('Not a number');
+  return Math.abs(v) < 1e-12 ? 0 : +v.toPrecision(12);
+}

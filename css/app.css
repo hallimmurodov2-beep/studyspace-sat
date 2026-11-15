@@ -254,6 +254,12 @@ button.list-row { width: 100%; text-align: left; }
 .navgrid button.wrong { border: 1.5px solid var(--danger); background: color-mix(in srgb, var(--danger) 12%, transparent); }
 .flag-btn.on { color: var(--danger); }
 .calc-pane { border-left: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; }
+.basic-calc { background: var(--surface); }
+.calc-hist { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; padding: 6px; }
+.calc-row { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; padding: 8px 10px; border-radius: 9px; font-family: var(--mono); text-align: right; }
+.calc-row:hover { background: var(--line); }
+.calc-row b { font-size: 18px; }
+.calc-row b.err { color: var(--danger); font: 600 13px var(--font); }
 .calc-pane iframe { flex: 1; border: 0; width: 100%; background: #fff; }
 .p-body.with-calc { grid-template-columns: minmax(0, 1fr) minmax(320px, 42%); }
 .p-body.with-calc.split { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(300px, 34%); }
